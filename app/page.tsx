@@ -79,6 +79,7 @@ export default function Home() {
     ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
+        console.log('Received WebSocket message:', message); // Log the received message
         if (message.type === 'status' && message.message === 'Processing completed') {
           setStatus('Processing completed. You can download the video now.');
           setDownloadReady(true);
@@ -87,12 +88,13 @@ export default function Home() {
         }
       } catch (error) {
         console.error('Failed to parse WebSocket message:', error);
+        setStatus('Failed to parse WebSocket message');
       }
     };
 
     ws.onerror = (error) => {
       console.error('WebSocket error:', error);
-      setStatus('WebSocket error');
+      setStatus(`WebSocket error: ${error}`);
     };
 
     ws.onclose = () => {
