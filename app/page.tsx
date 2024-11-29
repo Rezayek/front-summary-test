@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from 'react';
 
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export default function Home() {
   const [videoUrl, setVideoUrl] = useState('');
   const [videoId, setVideoId] = useState('');
   const [apiUrl, setApiUrl] = useState('');
   const [status, setStatus] = useState('');
-  const [ws, setWs] = useState<WebSocket | null>(null);
   const [downloadReady, setDownloadReady] = useState(false);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
 
@@ -33,7 +36,6 @@ export default function Home() {
     // Reset all state variables
     setVideoId('');
     setStatus('');
-    setWs(null);
     setDownloadReady(false);
     setVideoSrc(null);
 
@@ -50,10 +52,6 @@ export default function Home() {
     setVideoId(id);
 
     try {
-      // Establish a new WebSocket connection
-      const websocket = new WebSocket(`${apiUrl.replace('http', 'ws')}/progress/${id}`);
-      setWs(websocket);
-
       // Send the video processing request
       const params = new URLSearchParams({ video_url: videoUrl, topic: 'sarcastic' });
       const response = await fetch(`${apiUrl}/process?${params.toString()}`, { method: 'POST' });
@@ -62,55 +60,79 @@ export default function Home() {
         console.error('API response:', response);
         throw new Error('Failed to start processing');
       }
+
+      setStatus('Processing started...');
+      await checkProgress(id);  // Start polling for progress
     } catch (e) {
       console.error('Submission error:', e);
       setStatus('Error starting process. Please try again.');
     }
   };
 
-  useEffect(() => {
-    if (!ws) return;
-
-    ws.onopen = () => {
-      console.log('WebSocket connected');
-      setStatus('WebSocket connected');
-    };
-
-    ws.onmessage = (event) => {
+  const checkProgress = async (videoId: string) => {
+    let retries = 0;
+    const maxRetries = 1000; // Set a maximum number of retries
+  
+    // Poll every 20 seconds
+    while (retries < maxRetries) {
+      await sleep(20000); // Poll every 20 seconds
+      retries++;
+  
       try {
-        const message = JSON.parse(event.data);
-        console.log('Received WebSocket message:', message); // Log the received message
-        if (message.type === 'status' && message.message === 'Processing completed') {
-          setStatus('Processing completed. You can download the video now.');
-          setDownloadReady(true);
-          setVideoSrc(`${apiUrl}/download/${videoId}`);
-          ws.close();
+        const response = await fetch(`${apiUrl}/progress/${videoId}`,  {
+          method: 'GET',
+          headers: {
+            'Authorization': 'Bearer 2kHe38ixHrn4xbswQKLKdYNiKHZ_5Zuca64w7EvaUo4GctWkX', 
+            'ngrok-skip-browser-warning': 'true'
+          },
+        });
+  
+        // Check if the response is not JSON (indicating an error page)
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("text/html")) {
+          const responseText = await response.text();
+          console.log('Received HTML error page:', responseText); // Log the HTML response for debugging
+          throw new Error("Received HTML response instead of JSON. Check server logs.");
         }
-      } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
-        setStatus('Failed to parse WebSocket message');
+  
+        // Parse the JSON response
+        const data = await response.json();
+  
+        if (data.status === 'completed') {
+          setStatus('Processing completed. You can download the video now.');
+          setVideoSrc(`${apiUrl}/download/${videoId}`);
+          setDownloadReady(true);
+          
+          return; // Exit the loop as the processing is completed
+        } else if (data.status === 'error') {
+          setStatus(`Error: ${data.reason}`);
+          return; // Exit the loop as there is an error
+        } else {
+          setStatus('Processing... Please wait.');
+        }
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          console.error('Progress polling error:', error.message);
+          setStatus(`Continue Checking... ${retries}`);
+        } else {
+          console.error('Unknown error:', error);
+          setStatus('Continue Checking...');
+        }
       }
-    };
-
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      setStatus(`WebSocket error: ${error}`);
-    };
-
-    ws.onclose = () => {
-      console.log('WebSocket closed');
-      setStatus('WebSocket connection closed');
-    };
-
-    return () => {
-      if (ws.readyState === WebSocket.OPEN) ws.close();
-      setWs(null);
-    };
-  }, [ws, apiUrl, videoId]);
-
+    }
+  
+    // If we reached max retries without success, show a final error
+    setStatus('Max retries reached. Please try again later.');
+  };
+  
   const handleDownload = async () => {
     try {
-      const response = await fetch(`${apiUrl}/download/${videoId}`);
+      const response = await fetch(`${apiUrl}/download/${videoId}`,  {method: 'GET',
+        headers: {
+          'Authorization': 'Bearer 2kHe38ixHrn4xbswQKLKdYNiKHZ_5Zuca64w7EvaUo4GctWkX', 
+          'ngrok-skip-browser-warning': 'true'
+        },
+      });
       if (!response.ok) throw new Error('Download failed');
 
       const blob = await response.blob();
