@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
