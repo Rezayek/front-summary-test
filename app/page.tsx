@@ -13,6 +13,7 @@ export default function Home() {
   const [status, setStatus] = useState('');
   const [downloadReady, setDownloadReady] = useState(false);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const extractVideoId = (url: string): string | null => {
     try {
@@ -71,82 +72,115 @@ export default function Home() {
 
   const checkProgress = async (videoId: string) => {
     let retries = 0;
-    const maxRetries = 1000; // Set a maximum number of retries
+    const maxRetries = 1000;
+    
+    const headers = {
+      'Authorization': 'Bearer 2kHe38ixHrn4xbswQKLKdYNiKHZ_5Zuca64w7EvaUo4GctWkX',
+      'ngrok-skip-browser-warning': 'true'
+    };
   
-    // Poll every 20 seconds
     while (retries < maxRetries) {
-      await sleep(20000); // Poll every 20 seconds
+      await sleep(20000);
       retries++;
   
       try {
-        const response = await fetch(`${apiUrl}/progress/${videoId}`,  {
+        const response = await fetch(`${apiUrl}/progress/${videoId}`, {
           method: 'GET',
-          headers: {
-            'Authorization': 'Bearer 2kHe38ixHrn4xbswQKLKdYNiKHZ_5Zuca64w7EvaUo4GctWkX', 
-            'ngrok-skip-browser-warning': 'true'
-          },
+          headers
         });
   
-        // Check if the response is not JSON (indicating an error page)
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("text/html")) {
-          const responseText = await response.text();
-          console.log('Received HTML error page:', responseText); // Log the HTML response for debugging
-          throw new Error("Received HTML response instead of JSON. Check server logs.");
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
   
-        // Parse the JSON response
         const data = await response.json();
   
         if (data.status === 'completed') {
           setStatus('Processing completed. You can download the video now.');
-          setVideoSrc(`${apiUrl}/download/${videoId}`);
+          // Pre-fetch the video URL with headers
+          const videoUrl = `${apiUrl}/download/${videoId}`;
+          setVideoSrc(videoUrl);
           setDownloadReady(true);
-          
-          return; // Exit the loop as the processing is completed
+          return;
         } else if (data.status === 'error') {
           setStatus(`Error: ${data.reason}`);
-          return; // Exit the loop as there is an error
-        } else {
-          setStatus('Processing... Please wait.');
+          return;
         }
-      } catch (error: unknown) {
-        if (error instanceof Error) {
-          console.error('Progress polling error:', error.message);
-          setStatus(`Continue Checking... ${retries}`);
-        } else {
-          console.error('Unknown error:', error);
-          setStatus('Continue Checking...');
-        }
+        
+        setStatus(`Processing... (Attempt ${retries})`);
+      } catch (error) {
+        console.error('Progress check error:', error);
+        setStatus(`Checking progress... (Attempt ${retries})`);
       }
     }
   
-    // If we reached max retries without success, show a final error
     setStatus('Max retries reached. Please try again later.');
   };
   
   const handleDownload = async () => {
+    if (isDownloading) return;
+    
+    setIsDownloading(true);
+    setStatus('Starting download...');
+    
     try {
-      const response = await fetch(`${apiUrl}/download/${videoId}`,  {method: 'GET',
-        headers: {
-          'Authorization': 'Bearer 2kHe38ixHrn4xbswQKLKdYNiKHZ_5Zuca64w7EvaUo4GctWkX', 
-          'ngrok-skip-browser-warning': 'true'
-        },
+      const headers = {
+        'Authorization': 'Bearer 2kHe38ixHrn4xbswQKLKdYNiKHZ_5Zuca64w7EvaUo4GctWkX',
+        'ngrok-skip-browser-warning': 'true'
+      };
+
+      const response = await fetch(`${apiUrl}/download/${videoId}`, {
+        method: 'GET',
+        headers
       });
+
       if (!response.ok) throw new Error('Download failed');
 
-      const blob = await response.blob();
+      // Show download progress
+      const reader = response.body?.getReader();
+      const contentLength = response.headers.get('Content-Length');
+      const totalLength = contentLength ? parseInt(contentLength, 10) : 0;
+      
+      if (!reader) throw new Error('Unable to read response');
+
+      const chunks = [];
+      let receivedLength = 0;
+
+      while(true) {
+        const {done, value} = await reader.read();
+        
+        if (done) break;
+        
+        chunks.push(value);
+        receivedLength += value.length;
+        
+        // Update progress
+        if (totalLength) {
+          const progress = ((receivedLength / totalLength) * 100).toFixed(1);
+          setStatus(`Downloading: ${progress}%`);
+        }
+      }
+
+      // Combine chunks and create blob
+      const blob = new Blob(chunks, { type: 'video/mp4' });
       const url = window.URL.createObjectURL(blob);
+      
+      // Create and trigger download
       const a = document.createElement('a');
       a.href = url;
       a.download = `processed_${videoId}.mp4`;
       document.body.appendChild(a);
       a.click();
+      
+      // Cleanup
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      setStatus('Download completed!');
     } catch (error) {
       console.error('Download error:', error);
-      setStatus('Download failed');
+      setStatus('Download failed. Please try again.');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -171,6 +205,7 @@ export default function Home() {
           <button
             type="submit"
             className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            disabled={isDownloading}
           >
             Process Video
           </button>
@@ -187,15 +222,25 @@ export default function Home() {
           <div>
             <button
               onClick={handleDownload}
-              className="w-full p-2 bg-green-500 text-white rounded hover:bg-green-600"
+              disabled={isDownloading}
+              className={`w-full p-2 ${
+                isDownloading ? 'bg-gray-400' : 'bg-green-500 hover:bg-green-600'
+              } text-white rounded`}
             >
-              Download Processed Video
+              {isDownloading ? 'Downloading...' : 'Download Processed Video'}
             </button>
 
             {videoSrc && (
               <div className="mt-4">
-                <video controls className="w-full max-w-xl">
-                  <source src={videoSrc} type="video/mp4" />
+                <video 
+                  controls 
+                  className="w-full max-w-xl"
+                  key={videoSrc} // Force video reload when source changes
+                >
+                  <source 
+                    src={videoSrc} 
+                    type="video/mp4" 
+                  />
                   Your browser does not support the video tag.
                 </video>
               </div>
