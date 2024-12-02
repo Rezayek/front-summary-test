@@ -185,69 +185,71 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <div className="w-full max-w-2xl space-y-8">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            value={apiUrl}
-            onChange={(e) => setApiUrl(e.target.value)}
-            placeholder="Enter API Base URL"
-            className="w-full p-2 border rounded"
-          />
-          <input
-            type="text"
-            value={videoUrl}
-            onChange={(e) => setVideoUrl(e.target.value)}
-            placeholder="Enter YouTube URL"
-            className="w-full p-2 border rounded"
-          />
+  <main className="flex min-h-screen flex-col items-center justify-center p-24" style={{ backgroundColor: "#ffffff" }}>
+    <div className="w-full max-w-2xl space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <input
+          type="text"
+          value={apiUrl}
+          onChange={(e) => setApiUrl(e.target.value)}
+          placeholder="Enter API Base URL"
+          className="w-full p-3 text-lg border rounded border-gray-300"
+          style={{ fontSize: "1rem" }}
+        />
+        <input
+          type="text"
+          value={videoUrl}
+          onChange={(e) => setVideoUrl(e.target.value)}
+          placeholder="Enter YouTube URL"
+          className="w-full p-3 text-lg border rounded border-gray-300"
+          style={{ fontSize: "1rem" }}
+        />
+        <button
+          type="submit"
+          className="w-full p-3 bg-blue-500 text-white rounded hover:bg-blue-600"
+          disabled={isDownloading}
+          style={{ fontSize: "1rem" }}
+        >
+          Process Video
+        </button>
+      </form>
+
+      {status && (
+        <div className="p-4 border rounded bg-gray-50" style={{ fontSize: "1rem" }}>
+          <h2 className="font-bold mb-2">Status:</h2>
+          <p>{status}</p>
+        </div>
+      )}
+
+      {downloadReady && (
+        <div>
           <button
-            type="submit"
-            className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            onClick={handleDownload}
             disabled={isDownloading}
+            className={`w-full p-3 ${
+              isDownloading ? "bg-gray-400" : "bg-green-500 hover:bg-green-600"
+            } text-white rounded`}
+            style={{ fontSize: "1rem" }}
           >
-            Process Video
+            {isDownloading ? "Downloading..." : "Download Processed Video"}
           </button>
-        </form>
 
-        {status && (
-          <div className="p-4 border rounded bg-gray-50">
-            <h2 className="font-bold mb-2">Status:</h2>
-            <p>{status}</p>
-          </div>
-        )}
-
-        {downloadReady && (
-          <div>
-            <button
-              onClick={handleDownload}
-              disabled={isDownloading}
-              className={`w-full p-2 ${
-                isDownloading ? 'bg-gray-400' : 'bg-green-500 hover:bg-green-600'
-              } text-white rounded`}
-            >
-              {isDownloading ? 'Downloading...' : 'Download Processed Video'}
-            </button>
-
-            {videoSrc && (
-              <div className="mt-4">
-                <video 
-                  controls 
-                  className="w-full max-w-xl"
-                  key={videoSrc} // Force video reload when source changes
-                >
-                  <source 
-                    src={videoSrc} 
-                    type="video/mp4" 
-                  />
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </main>
-  );
+          {videoSrc && (
+            <div className="mt-4">
+              <video
+                controls
+                className="w-full max-w-xl"
+                key={videoSrc}
+                style={{ borderRadius: "8px" }}
+              >
+                <source src={videoSrc} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  </main>
+);
 }
