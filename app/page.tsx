@@ -185,7 +185,10 @@ export default function Home() {
   };
 
   return (
-  <main className="flex min-h-screen flex-col items-center justify-center p-24" style={{ backgroundColor: "#ffffff" }}>
+  <main
+    className="flex min-h-screen flex-col items-center justify-center p-24"
+    style={{ backgroundColor: "#ffffff" }}
+  >
     <div className="w-full max-w-2xl space-y-8">
       <form onSubmit={handleSubmit} className="space-y-6">
         <input
@@ -193,7 +196,7 @@ export default function Home() {
           value={apiUrl}
           onChange={(e) => setApiUrl(e.target.value)}
           placeholder="Enter API Base URL"
-          className="w-full p-3 text-lg border rounded border-gray-300"
+          className="w-full p-3 text-lg border rounded border-gray-300 text-black"
           style={{ fontSize: "1rem" }}
         />
         <input
@@ -201,7 +204,7 @@ export default function Home() {
           value={videoUrl}
           onChange={(e) => setVideoUrl(e.target.value)}
           placeholder="Enter YouTube URL"
-          className="w-full p-3 text-lg border rounded border-gray-300"
+          className="w-full p-3 text-lg border rounded border-gray-300 text-black"
           style={{ fontSize: "1rem" }}
         />
         <button
@@ -215,7 +218,10 @@ export default function Home() {
       </form>
 
       {status && (
-        <div className="p-4 border rounded bg-gray-50" style={{ fontSize: "1rem" }}>
+        <div
+          className="p-4 border rounded bg-gray-50 text-black"
+          style={{ fontSize: "1rem" }}
+        >
           <h2 className="font-bold mb-2">Status:</h2>
           <p>{status}</p>
         </div>
@@ -252,4 +258,5 @@ export default function Home() {
     </div>
   </main>
 );
+
 }
