@@ -14,6 +14,7 @@ export default function Home() {
   const [downloadReady, setDownloadReady] = useState(false);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [resolution, setResolution] = useState('1080p'); // Default resolution
 
   const extractVideoId = (url: string): string | null => {
     try {
@@ -53,8 +54,11 @@ export default function Home() {
     setVideoId(id);
 
     try {
-      // Send the video processing request
-      const params = new URLSearchParams({ video_url: videoUrl, topic: 'sarcastic' });
+      const params = new URLSearchParams({
+        video_url: videoUrl,
+        topic: 'sarcastic',
+        res: resolution // Pass the selected resolution
+      });
       const response = await fetch(`${apiUrl}/process?${params.toString()}`, { method: 'POST' });
 
       if (!response.ok) {
@@ -63,7 +67,7 @@ export default function Home() {
       }
 
       setStatus('Processing started...');
-      await checkProgress(id);  // Start polling for progress
+      await checkProgress(id); // Start polling for progress
     } catch (e) {
       console.error('Submission error:', e);
       setStatus('Error starting process. Please try again.');
@@ -73,31 +77,30 @@ export default function Home() {
   const checkProgress = async (videoId: string) => {
     let retries = 0;
     const maxRetries = 1000;
-    
+
     const headers = {
-      'Authorization': 'Bearer 2kHe38ixHrn4xbswQKLKdYNiKHZ_5Zuca64w7EvaUo4GctWkX',
+      Authorization: 'Bearer 2kHe38ixHrn4xbswQKLKdYNiKHZ_5Zuca64w7EvaUo4GctWkX',
       'ngrok-skip-browser-warning': 'true'
     };
-  
+
     while (retries < maxRetries) {
       await sleep(20000);
       retries++;
-  
+
       try {
         const response = await fetch(`${apiUrl}/progress/${videoId}`, {
           method: 'GET',
           headers
         });
-  
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-  
+
         const data = await response.json();
-  
+
         if (data.status === 'completed') {
           setStatus('Processing completed. You can download the video now.');
-          // Pre-fetch the video URL with headers
           const videoUrl = `${apiUrl}/download/${videoId}`;
           setVideoSrc(videoUrl);
           setDownloadReady(true);
@@ -106,26 +109,26 @@ export default function Home() {
           setStatus(`Error: ${data.reason}`);
           return;
         }
-        
+
         setStatus(`Processing... (Attempt ${retries})`);
       } catch (error) {
         console.error('Progress check error:', error);
         setStatus(`Checking progress... (Attempt ${retries})`);
       }
     }
-  
+
     setStatus('Max retries reached. Please try again later.');
   };
-  
+
   const handleDownload = async () => {
     if (isDownloading) return;
-    
+
     setIsDownloading(true);
     setStatus('Starting download...');
-    
+
     try {
       const headers = {
-        'Authorization': 'Bearer 2kHe38ixHrn4xbswQKLKdYNiKHZ_5Zuca64w7EvaUo4GctWkX',
+        Authorization: 'Bearer 2kHe38ixHrn4xbswQKLKdYNiKHZ_5Zuca64w7EvaUo4GctWkX',
         'ngrok-skip-browser-warning': 'true'
       };
 
@@ -136,43 +139,37 @@ export default function Home() {
 
       if (!response.ok) throw new Error('Download failed');
 
-      // Show download progress
       const reader = response.body?.getReader();
       const contentLength = response.headers.get('Content-Length');
       const totalLength = contentLength ? parseInt(contentLength, 10) : 0;
-      
+
       if (!reader) throw new Error('Unable to read response');
 
       const chunks = [];
       let receivedLength = 0;
 
-      while(true) {
-        const {done, value} = await reader.read();
-        
+      while (true) {
+        const { done, value } = await reader.read();
         if (done) break;
-        
+
         chunks.push(value);
         receivedLength += value.length;
-        
-        // Update progress
+
         if (totalLength) {
           const progress = ((receivedLength / totalLength) * 100).toFixed(1);
           setStatus(`Downloading: ${progress}%`);
         }
       }
 
-      // Combine chunks and create blob
       const blob = new Blob(chunks, { type: 'video/mp4' });
       const url = window.URL.createObjectURL(blob);
-      
-      // Create and trigger download
+
       const a = document.createElement('a');
       a.href = url;
       a.download = `processed_${videoId}.mp4`;
       document.body.appendChild(a);
       a.click();
-      
-      // Cleanup
+
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       setStatus('Download completed!');
@@ -202,6 +199,17 @@ export default function Home() {
             placeholder="Enter YouTube URL"
             className="w-full p-2 border rounded"
           />
+          <select
+            value={resolution}
+            onChange={(e) => setResolution(e.target.value)}
+            className="w-full p-2 border rounded"
+          >
+            <option value="144p">144p</option>
+            <option value="360p">360p</option>
+            <option value="480p">480p</option>
+            <option value="720p">720p</option>
+            <option value="1080p">1080p</option>
+          </select>
           <button
             type="submit"
             className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -232,14 +240,14 @@ export default function Home() {
 
             {videoSrc && (
               <div className="mt-4">
-                <video 
-                  controls 
+                <video
+                  controls
                   className="w-full max-w-xl"
-                  key={videoSrc} // Force video reload when source changes
+                  key={videoSrc}
                 >
-                  <source 
-                    src={videoSrc} 
-                    type="video/mp4" 
+                  <source
+                    src={videoSrc}
+                    type="video/mp4"
                   />
                   Your browser does not support the video tag.
                 </video>
