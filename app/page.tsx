@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export default function Home() {
@@ -57,9 +57,11 @@ export default function Home() {
       const params = new URLSearchParams({
         video_url: videoUrl,
         topic: 'sarcastic',
-        res: resolution // Pass the selected resolution
+        res: resolution, // Pass the selected resolution
       });
-      const response = await fetch(`${apiUrl}/process?${params.toString()}`, { method: 'POST' });
+      const response = await fetch(`${apiUrl}/process?${params.toString()}`, {
+        method: 'POST',
+      });
 
       if (!response.ok) {
         console.error('API response:', response);
@@ -80,7 +82,7 @@ export default function Home() {
 
     const headers = {
       Authorization: 'Bearer 2kHe38ixHrn4xbswQKLKdYNiKHZ_5Zuca64w7EvaUo4GctWkX',
-      'ngrok-skip-browser-warning': 'true'
+      'ngrok-skip-browser-warning': 'true',
     };
 
     while (retries < maxRetries) {
@@ -90,7 +92,7 @@ export default function Home() {
       try {
         const response = await fetch(`${apiUrl}/progress/${videoId}`, {
           method: 'GET',
-          headers
+          headers,
         });
 
         if (!response.ok) {
@@ -129,12 +131,12 @@ export default function Home() {
     try {
       const headers = {
         Authorization: 'Bearer 2kHe38ixHrn4xbswQKLKdYNiKHZ_5Zuca64w7EvaUo4GctWkX',
-        'ngrok-skip-browser-warning': 'true'
+        'ngrok-skip-browser-warning': 'true',
       };
 
       const response = await fetch(`${apiUrl}/download/${videoId}`, {
         method: 'GET',
-        headers
+        headers,
       });
 
       if (!response.ok) throw new Error('Download failed');
@@ -184,35 +186,34 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24">
       <div className="w-full max-w-2xl space-y-8">
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <input
             type="text"
             value={apiUrl}
             onChange={(e) => setApiUrl(e.target.value)}
             placeholder="Enter API Base URL"
-            className="w-full p-2 border rounded"
+            className="w-full p-3 text-lg border rounded border-gray-300 text-black"
           />
           <input
             type="text"
             value={videoUrl}
             onChange={(e) => setVideoUrl(e.target.value)}
             placeholder="Enter YouTube URL"
-            className="w-full p-2 border rounded"
+            className="w-full p-3 text-lg border rounded border-gray-300 text-black"
           />
           <select
             value={resolution}
             onChange={(e) => setResolution(e.target.value)}
-            className="w-full p-2 border rounded"
+            className="w-full p-3 text-lg border rounded border-gray-300 text-black"
           >
-            <option value="144p">144p</option>
-            <option value="360p">360p</option>
-            <option value="480p">480p</option>
-            <option value="720p">720p</option>
             <option value="1080p">1080p</option>
+            <option value="720p">720p</option>
+            <option value="480p">480p</option>
+            <option value="360p">360p</option>
           </select>
           <button
             type="submit"
-            className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="w-full p-3 bg-blue-500 text-white rounded hover:bg-blue-600"
             disabled={isDownloading}
           >
             Process Video
@@ -220,7 +221,7 @@ export default function Home() {
         </form>
 
         {status && (
-          <div className="p-4 border rounded bg-gray-50">
+          <div className="p-4 border rounded bg-gray-50 text-black">
             <h2 className="font-bold mb-2">Status:</h2>
             <p>{status}</p>
           </div>
@@ -231,7 +232,7 @@ export default function Home() {
             <button
               onClick={handleDownload}
               disabled={isDownloading}
-              className={`w-full p-2 ${
+              className={`w-full p-3 ${
                 isDownloading ? 'bg-gray-400' : 'bg-green-500 hover:bg-green-600'
               } text-white rounded`}
             >
@@ -240,15 +241,8 @@ export default function Home() {
 
             {videoSrc && (
               <div className="mt-4">
-                <video
-                  controls
-                  className="w-full max-w-xl"
-                  key={videoSrc}
-                >
-                  <source
-                    src={videoSrc}
-                    type="video/mp4"
-                  />
+                <video controls className="w-full max-w-xl">
+                  <source src={videoSrc} type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
               </div>
